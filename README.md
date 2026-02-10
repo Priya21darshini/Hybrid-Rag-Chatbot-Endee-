@@ -105,14 +105,14 @@ If no relevant match is found:
 
 ## Features
 
-✔ Semantic search over documents  
-✔ Chunk-based retrieval  
-✔ Cosine similarity ranking  
-✔ Threshold-based filtering  
-✔ Hybrid RAG + General Chat  
-✔ Fully offline (No paid APIs required)  
-✔ Uses local LLM (Ollama)  
-✔ Interactive CLI chatbot  
+ Semantic search over documents  
+ Chunk-based retrieval  
+ Cosine similarity ranking  
+ Threshold-based filtering  
+ Hybrid RAG + General Chat  
+ Fully offline (No paid APIs required)  
+ Uses local LLM (Ollama)  
+ Interactive CLI chatbot  
 
 ---
 

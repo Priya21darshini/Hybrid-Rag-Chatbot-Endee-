@@ -1,383 +1,182 @@
-# Endee: High-Performance Open Source Vector Database
+#  Hybrid RAG Chatbot using Vector Search + Local LLM (Ollama)
 
-**Endee (nD)** is a specialized, high-performance vector database built for speed and efficiency. This guide covers supported platforms, dependency requirements, and detailed build instructions using both our automated installer and manual CMake configuration.
+##  Overview
 
-there are 3 ways to build and run endee:
-1. quick installation and run using install.sh and run.sh scripts
-2. manual build using cmake
-3. using docker
+This project implements a **Hybrid Retrieval-Augmented Generation (RAG) system** that combines:
 
-also you can run endee using docker from docker hub without building it locally. refer to section 4 for more details.
+- Semantic vector search
+- Cosine similarity ranking
+- Document chunking
+- Threshold-based filtering
+- Local Large Language Model (LLM) via Ollama
+- Fallback general chat mode
 
----
+The system retrieves relevant document chunks using vector similarity and generates grounded answers using a local LLM. If no relevant context is found, it switches to general conversational mode.
 
-## System Requirements
-
-Before installing, ensure your system meets the following hardware and operating system requirements.
-
-### Supported Operating Systems
-
-* **Linux**: Ubuntu(22.04, 24.04, 25.04) Debian(12, 13), Rocky(8, 9, 10), Centos(8, 9, 10), Fedora(40, 42, 43)
-* **macOS**: Apple Silicon (M Series) only.
-
-### Required Dependencies
-
-The following packages are required for compilation.
-
- `clang-19`, `cmake`, `build-essential`, `libssl-dev`, `libcurl4-openssl-dev`
-
-> **Note:** The build system requires **Clang 19** (or a compatible recent Clang version) supporting C++20.
+This architecture mimics how real-world AI assistants are built in production environments.
 
 ---
 
-## 1. Quick Installation (Recommended)
+##  Problem Statement
 
-The easiest way to build **ndd** is using the included `install.sh` script. This script handles OS detection, dependency checks, and configuration automatically.
+Traditional chatbots often hallucinate or provide generic responses.  
+This project solves that by:
+
+- Retrieving relevant knowledge from a vector store
+- Injecting retrieved context into the prompt
+- Generating grounded, context-aware answers
+- Falling back gracefully for out-of-domain queries
+
+---
+
+## Architecture
+
+User Query  
+→ Sentence Transformer Embedding  
+→ Cosine Similarity Search (Vector Store)  
+→ Threshold Check  
+
+If Similarity ≥ Threshold  
+→ Retrieve Top-K Relevant Chunks  
+→ Combine Context  
+→ Send Context + Query to Ollama (RAG Mode)  
+→ Generate Grounded Response  
+
+Else  
+→ Send Query Directly to Ollama (General Mode)  
+→ Generate General Response  
+
+→ Final Response Returned to User
+
+
+
+---
+
+## 🛠 Tech Stack
+
+### Core Technologies
+- Python 3.x
+- NumPy
+- Requests
+
+### NLP & Embeddings
+- Sentence Transformers (`all-MiniLM-L6-v2`)
+- Hugging Face Transformers
+
+### Vector Search
+- Cosine Similarity (Custom Implementation)
+- In-memory Vector Store (NumPy-based)
+
+### Large Language Model
+- Ollama
+- Mistral (Local LLM)
+
+### Frontend / Interface
+- Streamlit (Chat-based UI)
+
+### System Design
+- Hybrid Retrieval-Augmented Generation (RAG)
+- Threshold-based Relevance Filtering
+- Top-K Retrieval Strategy
+
+---
+
+
+##  Key Concepts Implemented
+
+### 1️ Document Chunking
+Large documents are split into smaller semantic chunks to improve retrieval accuracy.
+
+### 2️ Vector Embeddings
+Each chunk is converted into a dense vector using Sentence Transformers.
+
+### 3️ Cosine Similarity
+Similarity between query embedding and stored embeddings is calculated using cosine similarity.
+
+### 4️ Threshold Filtering
+Only sufficiently relevant chunks are used for RAG to avoid hallucination.
+
+### 5️ Hybrid Mode
+If no relevant match is found:
+- The system falls back to general LLM mode.
+- Ensures smooth conversational behavior.
+
+---
+
+## Features
+
+✔ Semantic search over documents  
+✔ Chunk-based retrieval  
+✔ Cosine similarity ranking  
+✔ Threshold-based filtering  
+✔ Hybrid RAG + General Chat  
+✔ Fully offline (No paid APIs required)  
+✔ Uses local LLM (Ollama)  
+✔ Interactive CLI chatbot  
+
+---
+
+##  Project Structure
+
+project/
+
+├── data/docs/ # Knowledge base documents
+
+├── ingest.py 
+
+├── rag.py # Hybrid RAG chatbot logic
+
+├── requirements.txt 
+
+
+---
+
+##  Setup Instructions
+
+### Create Virtual Environment
+python -m venv venv
+.\venv\Scripts\Activate
+
+### Install Dependencies
+pip install -r project/requirements.txt
+
+### Install Ollama (Local LLM)
+
+Pull the model:
+ollama pull mistral
+
+Test the model:
+ollama run mistral
+(Type /exit to quit)
+
+### Generate Vector Store
+python project/ingest.py
+
+### Run Hybrid RAG Chatbot
+python project/rag.py
 
 ### Usage
+- Ask AI/ML-related questions to trigger RAG mode (document-grounded answers).
+- Ask general questions to trigger General Mode (LLM fallback).
+- Type "exit" to close the chatbot.
 
-First, ensure the script is executable:
-```bash
-chmod +x ./install.sh
-```
 
-Run the script from the root of the repository. You **must** provide arguments for the build mode and/or CPU optimization.
+##  Limitations
 
-```bash
-./install.sh [BUILD_MODE] [CPU_OPTIMIZATION]
-```
+- The knowledge base is limited to the documents provided in `data/docs`
+- Ollama requires local model execution and cannot be deployed on cloud-only platforms
+- Response latency depends on local system resources
 
-### Build Arguments
+##  Future Improvements
 
-You can combine one **Build Mode** and one **CPU Optimization** flag.
+- Add conversation memory across turns
+- Support dynamic document upload
+- Add evaluation metrics 
+- Deploy using cloud-based LLM APIs
+- Improve UI with advanced Streamlit components
 
-#### Build Modes
 
-| Flag | Description | CMake Equivalent |
-| --- | --- | --- |
-| `--release` | **Default.** Optimized release build. |  |
-| `--debug_all` | Enables full debugging symbols. | `-DND_DEBUG=ON -DDEBUG=ON` |
-| `--debug_nd` | Enables NDD-specific logging/timing. | `-DND_DEBUG=ON` |
+### Demo Video
+https://drive.google.com/drive/folders/1jU1toGVZiWerB2vfmVc8cm3cg1Mh_Ruh
 
-#### CPU Optimization Options
 
-Select the flag matching your hardware to enable SIMD optimizations.
-
-| Flag | Description | Target Hardware |
-| --- | --- | --- |
-| `--avx2` | Enables AVX2 (FMA, F16C) | Modern x86_64 Intel/AMD |
-| `--avx512` | Enables AVX512 (F, BW, VNNI, FP16) | Server-grade x86_64 (Xeon/Epyc) |
-| `--neon` | Enables NEON (FP16, DotProd) | Apple Silicon / ARMv8.2+ |
-| `--sve2` | Enables SVE2 (INT8/16, FP16) | ARMv9 / SVE2 compatible |
-
-> **Note:** The `--avx512` build configuration enforces mandatory runtime checks for specific instruction sets. To successfully run this build, your CPU must support **`avx512` (Foundation), `avx512_fp16`, `avx512_vnni`, `avx512bw`, and `avx512_vpopcntdq`**; if any of these extensions are missing, the database will fail to initialize and exit immediately to avoid runtime crashes.
-
-
-### Example Commands
-
-**Build for Production (Intel/AMD with AVX2):**
-
-```bash
-./install.sh --release --avx2
-```
-
-**Example Build for Debugging (Apple Silicon):**
-
-```bash
-./install.sh --debug_all --neon
-```
-
-### Running the Server
-
-We provide a `run.sh` script to simplify running the server. It automatically detects the built binary and uses `ndd_data_dir=./data` by default.
-
-First, ensure the script is executable:
-
-```bash
-chmod +x ./run.sh
-```
-
-Then run the script:
-
-```bash
-./run.sh
-```
-
-This will automatically identify the latest binary and start the server.
-
-#### Options
-
-You can override the defaults using arguments:
-
-*   `ndd_data_dir=DIR`: Set the data directory.
-*   `binary_file=FILE`: Set the binary file to run.
-*   `ndd_auth_token=TOKEN`: Set the authentication token (leave empty/ignore to run without authentication).
-
-#### Examples
-
-**Run with custom data directory:**
-
-```bash
-./run.sh ndd_data_dir=./my_data
-```
-
-**Run specific binary:**
-
-```bash
-./run.sh binary_file=./build/ndd-avx2
-```
-
-**Run with authentication token:**
-
-```bash
-./run.sh ndd_auth_token=your_token
-```
-
-
-**Run with all options**
-
-```bash
-./run.sh ndd_data_dir=./my_data binary_file=./build/ndd-avx2 ndd_auth_token=your_token
-```
-
-**For Help**
-
-```bash
-./run.sh --help
-```
-
-
-## 2. Manual Build (Advanced)
-
-If you prefer to configure the build manually or integrate it into an existing install pipeline, you can use `cmake` directly.
-
-### Step 1: Prepare Build Directory
-
-```bash
-mkdir build && cd build
-```
-
-### Step 2: Configure
-
-Run `cmake` with the appropriate flags. You must manually define the compiler if it is not your system default.
-
-**Configuration Flags:**
-
-* **Debug Options:**
-* `-DDEBUG=ON` (Enable debug symbols/O0)
-* `-DND_DEBUG=ON` (Enable internal logging)
-
-
-* **SIMD Selectors (Choose One):**
-* `-DUSE_AVX2=ON`
-* `-DUSE_AVX512=ON`
-* `-DUSE_NEON=ON`
-* `-DUSE_SVE2=ON`
-
-
-**Example (x86_64 AVX512 Release):**
-
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release \
-      -DUSE_AVX512=ON \
-      ..
-```
-
-### Step 3: Compile
-
-```bash
-make -j$(nproc)
-```
-
-### Running the Built Binary
-
-After a successful build, the binary will be generated in the `build/` directory.
-
-### Binary Naming
-
-The output binary name depends on the SIMD flag used during compilation:
-
-* `ndd-avx2`
-* `ndd-avx512`
-* `ndd-neon` (or `ndd-neon-darwin` for mac)
-* `ndd-sve2`
-
-### Runtime Environment Variables
-
-Some environment variables **ndd** reads at runtime:
-
-* `NDD_DATA_DIR`: Defines the data directory
-* `NDD_AUTH_TOKEN`: Optional authentication token (see below)
-
-### Authentication
-
-**ndd** supports two authentication modes:
-
-**Open Mode (No Authentication)** - Default when `NDD_AUTH_TOKEN` is not set:
-```bash
-# All APIs work without authentication
-./build/ndd-avx2
-curl http://{{BASE_URL}}/api/v1/index/list
-```
-
-**Token Mode** - When `NDD_AUTH_TOKEN` is set:
-```bash
-# Generate a secure token
-export NDD_AUTH_TOKEN=$(openssl rand -hex 32)
-./build/ndd-avx2
-
-# All protected APIs require the token in Authorization header
-curl -H "Authorization: $NDD_AUTH_TOKEN" http://{{BASE_URL}}/api/v1/index/list
-```
-
-### Execution Example
-
-To run the database using the AVX2 binary and a local `data` folder:
-
-```bash
-# 1. Create the data directory
-mkdir -p ./data
-
-# 2. Export the environment variable and run
-export NDD_DATA_DIR=$(pwd)/data
-./build/ndd-avx2
-```
-
-Alternatively, as a single line:
-
-```bash
-NDD_DATA_DIR=./data ./build/ndd-avx2
-```
-
----
-
-
-
-## 3. Docker Deployment
-
-We provide a Dockerfile for easy containerization. This ensures a consistent runtime environment and simplifies the deployment process across various platforms.
-
-### Build the Image
-
-You **must** specify the target architecture (`avx2`, `avx512`, `neon`, `sve2`) using the `BUILD_ARCH` build argument. You can optionally enable a debug build using the `DEBUG` argument.
-
-```bash
-# Production Build (AVX2) (for x86_64 systems)
-docker build --ulimit nofile=100000:100000 --build-arg BUILD_ARCH=avx2 -t endee-oss:latest -f ./infra/Dockerfile .
-
-# Debug Build (Neon) (for arm64, mac apple silicon)
-docker build --ulimit nofile=100000:100000 --build-arg BUILD_ARCH=neon --build-arg DEBUG=true -t endee-oss:latest -f ./infra/Dockerfile .
-```
-
-### Run the Container
-
-The container exposes port `8080` and stores data in `/data` inside container. You should persist this data using a docker volume.
-
-```bash
-docker run \
-  -p 8080:8080 \
-  -v endee-data:/data \
-  -e NDD_AUTH_TOKEN="your_secure_token" \
-  --name endee-server \
-  endee-oss:latest
-```
-
-leave `NDD_AUTH_TOKEN` empty or remove it to run endee without authentication.
-
-### Alternatively: Docker Compose
-
-You can also use `docker-compose` to run the service.
-
-1. Start the container:
-   ```bash
-   docker-compose up
-   ```
-
----
-
-## 4. Running Docker container from registry
-
-You can run Endee directly using the pre-built image from Docker Hub without building locally.
-
-### Using Docker Compose
-
-Create a new directory for Endee:
-
-```bash
-mkdir endee && cd endee
-```
-
-Inside this directory, create a file named `docker-compose.yml` and copy the following content into it:
-
-```yaml
-services:
-  endee:
-    image: endeeio/endee-server:latest
-    container_name: endee-server
-    ports:
-      - "8080:8080"
-    environment:
-      NDD_NUM_THREADS: 0
-      NDD_AUTH_TOKEN: ""  # Optional: set for authentication
-    volumes:
-      - endee-data:/data
-    restart: unless-stopped
-
-volumes:
-  endee-data:
-```
-
-Then run:
-```bash
-docker compose up -d
-```
-
-for more details visit [docs.endee.io](https://docs.endee.io/quick-start)
-
----
-
-## Contribution
-
-We welcome contributions from the community to help make vector search faster and more accessible for everyone. To contribute:
-
-* **Submit Pull Requests**: Have a fix or a new feature? Fork the repo, create a branch, and send a PR.
-* **Report Issues**: Found a bug or a performance bottleneck? Open an issue on GitHub with steps to reproduce it.
-* **Suggest Improvements**: We are always looking to optimize performance; feel free to suggest new CPU target optimizations or architectural enhancements.
-* **Feature Requests**: If there is a specific functionality you need, start a discussion in the issues section.
-
----
-
-## License
-
-Endee is open source software licensed under the
-**Apache License 2.0**.
-
-You are free to use, modify, and distribute this software for
-personal, commercial, and production use.
-
-See the LICENSE file for full license terms.
-
----
-
-## Trademark and Branding
-
-“Endee” and the Endee logo are trademarks of Endee Labs.
-
-The Apache License 2.0 does **not** grant permission to use the Endee name,
-logos, or branding in a way that suggests endorsement or affiliation.
-
-If you offer a hosted or managed service based on this software, you must:
-- Use your own branding
-- Avoid implying it is an official Endee service
-
-For trademark or branding permissions, contact: enterprise@endee.io
-
----
-
-## Third-Party Software
-
-This project includes or depends on third-party software components that are
-licensed under their respective open source licenses.
-
-Use of those components is governed by the terms and conditions of their
-individual licenses, not by the Apache License 2.0 for this project.
